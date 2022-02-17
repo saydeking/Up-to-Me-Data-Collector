@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "238942718072",
+    "project_id": "up-to-me-14947",
+    "storage_bucket": "up-to-me-14947.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:238942718072:android:def1f15fd450ad2960058d",
+        "android_client_info": {
+          "package_name": "com.example.trackingfeature"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "238942718072-pgchua36gnqq5n7ml078ff8jbh7ajqqm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAI5ntDR9IKtKKjas5jN980CF9P534mZIU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "238942718072-pgchua36gnqq5n7ml078ff8jbh7ajqqm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
