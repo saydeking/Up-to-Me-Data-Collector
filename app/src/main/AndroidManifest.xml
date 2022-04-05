@@ -20,9 +20,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TrackingFeature">
         <activity
-            android:name=".TimeFenceActivity"
-            android:exported="false" />
-        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -38,7 +35,7 @@
 
         <meta-data
             android:name="com.google.android.awareness.API_KEY"
-            android:value="AIzaSyCBFYXl1ikwSNMKcGX5w-e8OWw2InsRTIY" />
+            android:value="AIzaSyBdBY4WBKFxSEyfpL7lQeVK_-vlshRyC6k" />
     </application>
 
 </manifest>
