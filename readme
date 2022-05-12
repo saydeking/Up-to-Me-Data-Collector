@@ -12,10 +12,8 @@ Online database and other services:
   
 Future Tasks:
 
-* Create Multiple Location Fences based in user input. User should be able to input addresses or location pin, and the app should perform
-  address translation to convert that into coordinates.
-* Implement Login functionality. Use firebase to assign each user with  unique ID to label their personalized data in the database. 
-  Implemnt login using phone's default authentication method.
+* Create Multiple Location Fences based in user input. User should be able to input addresses or location pin, and the app should perform address translation to convert that into coordinates.
+* Implement Login functionality. Use firebase to assign each user with  unique ID to label their personalized data in the database. Implemnt login using phone's default authentication method.
  
   
   
