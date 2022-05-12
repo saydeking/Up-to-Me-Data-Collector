@@ -1,0 +1,25 @@
+Resources for Development:
+
+For making new Fences:
+  Google Awareness API: https://developers.google.com/awareness 
+ 
+For pushing notifications:
+  Google Notidification API: https://developer.android.com/training/notify-user/build-notification
+  
+Online database and other services:
+  Firebase guides: https://firebase.google.com/docs/guides
+  
+  
+Future Tasks:
+
+* Create Multiple Location Fences based in user input. User should be able to input addresses or location pin, and the app should perform
+  address translation to convert that into coordinates.
+* Implement Login functionality. Use firebase to assign each user with  unique ID to label their personalized data in the database. 
+  Implemnt login using phone's default authentication method.
+ 
+  
+  
+  
+  
+
+  
