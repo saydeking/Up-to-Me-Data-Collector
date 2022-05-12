@@ -3,11 +3,16 @@ package com.example.trackingfeature;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import java.util.Calendar;
 import java.util.Date;
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -17,6 +22,7 @@ import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.TextUtils;
@@ -53,8 +59,6 @@ public class MainActivity extends AppCompatActivity {
 
     //initialize variables
 
-
-
     //initialize fence variables
     private static final String TAG = "Main Activity";
     private PendingIntent mPendingIntent;
@@ -66,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
     private PendingIntent lfPendingIntent;
     private LocationFenceReceiver lfFenceReceiver;
     private static final String LOCATION_FENCE_KEY = "LOCATION_FENCE_KEY";
-
 
     //Headphones Fence
     private PendingIntent hfPendingIntent;
@@ -86,6 +89,10 @@ public class MainActivity extends AppCompatActivity {
     private WalkFenceReceiver walkFenceReceiver;
     private static final String WALK_FENCE_KEY = "WALK_FENCE_KEY";
 
+    //Variables for pushing notifications
+    private static final String CHANNEL_ID = "FenceChannel";
+    private static final String GROUP_KEY = "FenceGroup";
+
 
 
 
@@ -93,9 +100,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        createNotificationChannel();
         //assign variables
 
+        //Connect variables to their UI elements
         displayText = findViewById(R.id.testView);
         locationDisplayText = findViewById(R.id.locationFenceView);
         headphonesDisplayText = findViewById(R.id.headphonesFenceView);
@@ -104,6 +112,8 @@ public class MainActivity extends AppCompatActivity {
         walkDisplayText = findViewById(R.id.walkFenceView);
 
 
+        // For each fence a new pending intent has to be created. To create a pending intent, we need to create an Intent. To create fences, we have to create Intents
+        // by creating overloaded broadcast receiver classes. The pending intent variable will be intialized as an listener to the changes in our fences.
         Intent intent = new Intent(FenceReceiver.FENCE_RECEIVER_ACTION);
         mPendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_MUTABLE);
         mFenceReceiver = new FenceReceiver();
@@ -132,7 +142,15 @@ public class MainActivity extends AppCompatActivity {
         walkPendingIntent = PendingIntent.getBroadcast(this, 0, intentWalkFence, PendingIntent.FLAG_MUTABLE);
         walkFenceReceiver = new WalkFenceReceiver();
 
+        setupFence();
 
+        // register the receivers listening to changes in the fence state
+        registerReceiver(hfFenceReceiver, new IntentFilter(HeadphonesFenceReceiver.FENCE_RECEIVER_ACTION));
+        registerReceiver(mFenceReceiver, new IntentFilter(FenceReceiver.FENCE_RECEIVER_ACTION));
+        registerReceiver(lfFenceReceiver, new IntentFilter(LocationFenceReceiver.FENCE_RECEIVER_ACTION));
+        registerReceiver(bikeFenceReceiver, new IntentFilter(BikeFenceReceiver.FENCE_RECEIVER_ACTION));
+        registerReceiver(runFenceReceiver, new IntentFilter(RunFenceReceiver.FENCE_RECEIVER_ACTION));
+        registerReceiver(walkFenceReceiver, new IntentFilter(WalkFenceReceiver.FENCE_RECEIVER_ACTION));
 
 
 
@@ -142,17 +160,24 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        setupFence();
-        registerReceiver(hfFenceReceiver, new IntentFilter(HeadphonesFenceReceiver.FENCE_RECEIVER_ACTION));
-        registerReceiver(mFenceReceiver, new IntentFilter(FenceReceiver.FENCE_RECEIVER_ACTION));
-        registerReceiver(lfFenceReceiver, new IntentFilter(LocationFenceReceiver.FENCE_RECEIVER_ACTION));
-        registerReceiver(bikeFenceReceiver, new IntentFilter(BikeFenceReceiver.FENCE_RECEIVER_ACTION));
-        registerReceiver(runFenceReceiver, new IntentFilter(RunFenceReceiver.FENCE_RECEIVER_ACTION));
-        registerReceiver(walkFenceReceiver, new IntentFilter(WalkFenceReceiver.FENCE_RECEIVER_ACTION));
+
+//        NOTE: Fences can be either initialized and setup in the onCreate method or in the onStart method. Using either options affects performance and consistency in
+//              some sort of way which should be tested before letting user use the App
+
+
+//        setupFence();
+//        registerReceiver(hfFenceReceiver, new IntentFilter(HeadphonesFenceReceiver.FENCE_RECEIVER_ACTION));
+//        registerReceiver(mFenceReceiver, new IntentFilter(FenceReceiver.FENCE_RECEIVER_ACTION));
+//        registerReceiver(lfFenceReceiver, new IntentFilter(LocationFenceReceiver.FENCE_RECEIVER_ACTION));
+//        registerReceiver(bikeFenceReceiver, new IntentFilter(BikeFenceReceiver.FENCE_RECEIVER_ACTION));
+//        registerReceiver(runFenceReceiver, new IntentFilter(RunFenceReceiver.FENCE_RECEIVER_ACTION));
+//        registerReceiver(walkFenceReceiver, new IntentFilter(WalkFenceReceiver.FENCE_RECEIVER_ACTION));
     }
 
     @Override
     protected void onStop() {
+
+        //Unregister the listeners when the user changes their screen from the app to any other screen.
         super.onStop();
         unregisterFence();
         unregisterReceiver(mFenceReceiver);
@@ -163,6 +188,25 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(walkFenceReceiver);
     }
 
+    protected void onDestroy(){
+        super.onDestroy();
+
+//        NOTE: In recent updates of the android API, it is not possible to unregister fences in the onDestroy method, as it is not allowed to have fences running in
+//              the background. But in one of the test runs the fences were running in the background, even when the app was closed (not killed). This should be explored
+//              further since it can be an easy way to run the fences in the background.
+
+//        unregisterFence();
+//        unregisterReceiver(mFenceReceiver);
+//        unregisterReceiver(lfFenceReceiver);
+//        unregisterReceiver(hfFenceReceiver);
+//        unregisterReceiver(bikeFenceReceiver);
+//        unregisterReceiver(runFenceReceiver);
+//        unregisterReceiver(walkFenceReceiver);
+    }
+
+
+    // Function to setup the Fences. Edit the parameters of the fences to change its behavior.
+    // Each fences can be setup in various ways, please visit the awareness api documentation for more info
     private void setupFence() {
 
         AwarenessFence timeFence = TimeFence.inDailyInterval(TimeZone.getDefault(),
@@ -172,8 +216,9 @@ public class MainActivity extends AppCompatActivity {
 
        //*******************************************************************************************************************************************
         @SuppressLint("MissingPermission")
-        AwarenessFence locationFence = LocationFence.in(28.064091447842966, -82.41310445046034, 50, 10 * 1000);
-
+        //AwarenessFence locationFence = LocationFence.in(28.064091447842966, -82.41310445046034, 50, 10 * 1000);
+        AwarenessFence locationFence = LocationFence.in(28.064857189859197, -82.43403777124016, 5, 100);
+// 28.064857189859197, -82.43403777124016
         Awareness.getFenceClient(this).updateFences(new FenceUpdateRequest.Builder()
                 .addFence(LOCATION_FENCE_KEY, locationFence, lfPendingIntent)
                 .build())
@@ -299,6 +344,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+
+    // This function unregisters all the fences. The code is implemented using awareness api documentation.
     private void unregisterFence() {
 
         Awareness.getFenceClient(this).updateFences(new FenceUpdateRequest.Builder()
@@ -401,10 +449,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    // As mentioned earlier, to create fences we have to use pending intents which are created using Intents initialized using overloaded broadcast receiver classes.
+    // The following are the implemented classes for each of the fences. Make sure to create a new one for every new fence implemented.
+    // The first class has comments explaining each element for documentation purposes. The following classes have the same structure and logic.
+
     private class FenceReceiver extends BroadcastReceiver {
+
+        // a string variable pointing to itself. This is used to initialize the class when creating an Intent
         public static final String FENCE_RECEIVER_ACTION =
                 "com.example.trackingfeature.FenceReceiver.FENCE_RECEIVER_ACTION";
 
+        // Override the onReceive functions to customize the response to changes detected in the fence.
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -412,18 +467,18 @@ public class MainActivity extends AppCompatActivity {
 
             if (TextUtils.equals(fenceState.getFenceKey(), FENCE_KEY)) {
                 String fenceStateStr;
-                switch (fenceState.getCurrentState()) {
+                switch (fenceState.getCurrentState()) { // Fence state will be either True, False, or unknown based on the parameters set and the state of the device
                     case FenceState.TRUE:
                         fenceStateStr = "true";
-
+                        // add logic for True here
                         break;
                     case FenceState.FALSE:
                         fenceStateStr = "false";
-
+                        // add logic for false here
                         break;
                     case FenceState.UNKNOWN:
                         fenceStateStr = "unknown";
-
+                        // debug
                         break;
                     default:
                         fenceStateStr = "unknown value";
@@ -431,9 +486,29 @@ public class MainActivity extends AppCompatActivity {
                 displayText.setText(fenceStateStr);
                 Log.d(TAG, fenceStateStr);
 
+                // Push a toast notification. Used for testing
                 int duration = Toast.LENGTH_SHORT;
                 Toast toast = Toast.makeText(context, fenceStateStr, duration);
                 toast.show();
+
+                //Push a notification:
+                //For notifications too we need to create a pending intent. The Intent used here will be created using the  notificationReceiver
+                // (overloaded broadcastReceiver)class
+                Intent notifyIntent = new Intent(MainActivity.this, notificationReciever.class);
+                notifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                PendingIntent notifyPendingIntent = PendingIntent.getActivity(MainActivity.this, 0, notifyIntent, PendingIntent.FLAG_MUTABLE);
+
+                //Using the pending intent we can create our notification. Android offers a lot of options fro customizing, grouping, and organizing notifications.
+                // Please visit the android documentation on notifications to create various notifications
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                        .setContentTitle("Time Fence")
+                        .setContentText(fenceStateStr)
+                        .setContentIntent(notifyPendingIntent)
+                        .setAutoCancel(true);
+
+
+                PushNotification( builder, 1);
             }
 
 
@@ -474,9 +549,24 @@ public class MainActivity extends AppCompatActivity {
 //                int duration = Toast.LENGTH_SHORT;
 //                Toast toast = Toast.makeText(context, fenceStateStr, duration);
 //                toast.show();
+                Intent lnotifyIntent = new Intent(MainActivity.this, notificationReciever.class);
+                lnotifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                PendingIntent lnotifyPendingIntent = PendingIntent.getActivity(MainActivity.this, 0, lnotifyIntent, PendingIntent.FLAG_MUTABLE);
+
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                        .setContentTitle("Location Fence")
+                        .setContentText(fenceStateStr)
+                        .setContentIntent(lnotifyPendingIntent)
+                        .setAutoCancel(true);
+
+
+                PushNotification( builder, 2);
+
+
             }
         }
-
     }
 
     private class HeadphonesFenceReceiver extends BroadcastReceiver {
@@ -512,6 +602,19 @@ public class MainActivity extends AppCompatActivity {
 //                int duration = Toast.LENGTH_SHORT;
 //                Toast toast = Toast.makeText(context, fenceStateStr, duration);
 //                toast.show();
+                Intent hnotifyIntent = new Intent(MainActivity.this, notificationReciever.class);
+                hnotifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                PendingIntent hnotifyPendingIntent = PendingIntent.getActivity(MainActivity.this, 0, hnotifyIntent, PendingIntent.FLAG_MUTABLE);
+
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                        .setContentTitle("Headphones Fence")
+                        .setContentText(fenceStateStr)
+                        .setContentIntent(hnotifyPendingIntent)
+                        .setAutoCancel(true);
+
+                PushNotification( builder, 3);
             }
         }
 
@@ -525,21 +628,13 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             FenceState fenceState = FenceState.extract(intent);
-            int i = 0;
-
-            long time = 0;
+            ;
             if (TextUtils.equals(fenceState.getFenceKey(), BIKE_FENCE_KEY)) {
-                if (i == 0){
-                    Date currentTime = Calendar.getInstance().getTime();
-                    time = currentTime.getTime() / 1000L;
-                } else {
-                    Date currentTime = Calendar.getInstance().getTime();
-                    time = (currentTime.getTime() - time) / 1000L;
-                }
+
                 String fenceStateStr;
                 switch (fenceState.getCurrentState()) {
                     case FenceState.TRUE:
-                        fenceStateStr = "Biking for" + time + " seconds";
+                        fenceStateStr = "Biking";
 
                         break;
                     case FenceState.FALSE:
@@ -559,6 +654,19 @@ public class MainActivity extends AppCompatActivity {
 //                int duration = Toast.LENGTH_SHORT;
 //                Toast toast = Toast.makeText(context, fenceStateStr, duration);
 //                toast.show();
+                Intent bnotifyIntent = new Intent(MainActivity.this, notificationReciever.class);
+                bnotifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                PendingIntent bnotifyPendingIntent = PendingIntent.getActivity(MainActivity.this, 0, bnotifyIntent, PendingIntent.FLAG_MUTABLE);
+
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                        .setContentTitle("Bike Fence")
+                        .setContentText(fenceStateStr)
+                        .setContentIntent(bnotifyPendingIntent)
+                        .setAutoCancel(true);
+
+                PushNotification( builder, 4);
             }
         }
 
@@ -572,21 +680,13 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             FenceState fenceState = FenceState.extract(intent);
-            int i = 0;
 
-            long time = 0;
             if (TextUtils.equals(fenceState.getFenceKey(), RUN_FENCE_KEY)) {
-                if (i == 0){
-                    Date currentTime = Calendar.getInstance().getTime();
-                    time = currentTime.getTime() / 1000L;
-                } else {
-                    Date currentTime = Calendar.getInstance().getTime();
-                    time = (currentTime.getTime() - time) / 1000L;
-                }
+
                 String fenceStateStr;
                 switch (fenceState.getCurrentState()) {
                     case FenceState.TRUE:
-                        fenceStateStr = "running for" + time + " seconds";
+                        fenceStateStr = "running";
 
                         break;
                     case FenceState.FALSE:
@@ -606,6 +706,19 @@ public class MainActivity extends AppCompatActivity {
 //                int duration = Toast.LENGTH_SHORT;
 //                Toast toast = Toast.makeText(context, fenceStateStr, duration);
 //                toast.show();
+                Intent rnotifyIntent = new Intent(MainActivity.this, notificationReciever.class);
+                rnotifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                PendingIntent rnotifyPendingIntent = PendingIntent.getActivity(MainActivity.this, 0, rnotifyIntent, PendingIntent.FLAG_MUTABLE);
+
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                        .setContentTitle("Running Fence")
+                        .setContentText(fenceStateStr)
+                        .setContentIntent(rnotifyPendingIntent)
+                        .setAutoCancel(true);
+
+                PushNotification( builder, 5);
             }
         }
 
@@ -619,23 +732,14 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             FenceState fenceState = FenceState.extract(intent);
-            int i = 0;
 
-            long time = 0;
             if (TextUtils.equals(fenceState.getFenceKey(), WALK_FENCE_KEY)) {
 
                 String fenceStateStr;
                 switch (fenceState.getCurrentState()) {
                     case FenceState.TRUE:
-                        if (i == 0){
-                            Date currentTime = Calendar.getInstance().getTime();
-                            time = currentTime.getTime() / 1000L;
-                            i++;
-                        } else {
-                            Date currentTime = Calendar.getInstance().getTime();
-                            time = (currentTime.getTime() - time) / 1000L;
-                        }
-                        fenceStateStr = "Walking for " + time + " seconds";
+
+                        fenceStateStr = "Walking";
 
                         break;
                     case FenceState.FALSE:
@@ -655,10 +759,57 @@ public class MainActivity extends AppCompatActivity {
 //                int duration = Toast.LENGTH_SHORT;
 //                Toast toast = Toast.makeText(context, fenceStateStr, duration);
 //                toast.show();
+                Intent wnotifyIntent = new Intent(MainActivity.this, notificationReciever.class);
+                wnotifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                PendingIntent wnotifyPendingIntent = PendingIntent.getActivity(MainActivity.this, 0, wnotifyIntent, PendingIntent.FLAG_MUTABLE);
+
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                        .setContentTitle("Walking Fence")
+                        .setContentText(fenceStateStr)
+                        .setContentIntent(wnotifyPendingIntent)
+                        .setAutoCancel(true);
+
+                PushNotification( builder, 6);
             }
         }
 
     }
+    // Overloaded broadcastReceiver class that receives notification pushes
+    private class notificationReciever extends BroadcastReceiver{
 
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.i(TAG, "notifcation tapped)");
+        }
+    }
+
+    //Helper function to push notifications
+    private void PushNotification( NotificationCompat.Builder builder  , int notificationId){
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+
+// notificationId is a unique int for each notification that you must define
+        notificationManager.notify(notificationId, builder.setGroup(GROUP_KEY).build());
+
+    }
+
+    //Function ot create notification channel. Source: android documentation
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "fenceChannel";
+            String description = "Notification channel for fences";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
 
 }
